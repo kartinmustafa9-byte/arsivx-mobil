@@ -23,16 +23,13 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Install dependencies
         run: npm install
 
       - name: Prepare WWW Folder
         run: |
           mkdir www
-          cp *.html *.js *.css *.png www/ || true
+          cp *.html *.js *.css *.json www/ || true
 
       - name: Prepare Capacitor
         run: |

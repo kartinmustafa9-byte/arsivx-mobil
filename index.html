@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ArşivX | Yapay Zeka Destekli Arşiv Yönetimi</title>
+    <meta name="description" content="ArşivX - Yapay Zeka destekli akıllı arşivleme sistemi">
+    <link rel="apple-touch-icon" href="logo.png">
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css?v=20260602_v44">
+    <script>
+        // Fix CommonJS CDN conflict inside Electron so libraries attach to window
+        if (typeof module === 'object') {
+            window.tempModule = module;
+            module = undefined;
+        }
+    </script>
+    <script src="sweetalert2.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
+    <script src="https://unpkg.com/lucide@latest" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js" defer></script>
+    <script>
+        // Restore Node.js module scope
+        if (window.tempModule) {
+            module = window.tempModule;
+            window.tempModule = undefined;
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <script>
+        window.onerror = function(msg, url, line) {
+            console.error("[HTML Hatası] " + msg + " | Satır: " + line);
+            return false;
+        };
+    </script>
+</head>
+<body>
+    <div id="app">
+
+    <!-- ===== GİRİŞ EKRANI ===== -->
+    <div id="screen-login">
+        <div class="login-content animate-in">
+            <div class="login-logo">
+                <img src="logo.png" alt="ArşivX Logo">
+            </div>
+            <h1>ArşivX AI</h1>
+            <p>Yapay Zeka Destekli Akıllı Arşivleme Sistemi</p>
+            <div class="login-actions">
+                <button id="googleLoginBtn" class="google-btn">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                    Google ile Giriş Yap
+                </button>
+                <a href="mailto:kartinmustafa9@gmail.com" class="demo-login-btn">
+                    Bir sorun mu yaşıyorsunuz? Bize ulaşın.
+                </a>
+            </div>
+        </div>
+    </div>
+        <!-- ===== ANA UYGULAMA ===== -->
+    <div id="main-interface" class="hidden">
+
+        <!-- MOBİL ÜST BAR (BURGER BUTONLU) -->
+        <header class="mobile-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button id="menu-toggle" class="menu-toggle-btn" onclick="window.toggleMenu(true)">
+                    <i data-lucide="menu"></i>
+                </button>
+            </div>
+            <div class="mobile-header-title">ArşivX <strong>AI</strong></div>
+        </header>
+
+        <!-- MENÜ ARKA PLAN KARARTMASI -->
+        <div id="menu-backdrop" class="drawer-overlay hidden" onclick="window.toggleMenu(false)"></div>
+
+        <!-- SOL KENAR ÇUBUĞU (Masaüstünde sabit, Mobilce sürgülü) -->
+        <nav class="tab-bar" id="sidebarMenu">
+            <button class="drawer-close-btn" onclick="window.toggleMenu(false)">
+                <i data-lucide="x"></i>
+            </button>
+
+            <div class="sidebar-logo">
+                <img src="logo.png" alt="Logo" style="width: 32px; height: 32px; border-radius: 8px; box-shadow: 0 0 10px var(--accent);">
+                <span>ArşivX <strong>AI</strong></span>
+            </div>
+
+            <!-- SİDEBAR KULLANICI BİLGİSİ -->
+            <div class="sidebar-user-box" style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.02); margin: 0 10px 10px 10px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                <img id="sidebar-user-img" src="logo.png" alt="Kullanıcı" style="width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--accent); object-fit: cover; background: #060713;">
+                <div style="display: flex; flex-direction: column; overflow: hidden; flex: 1;">
+                    <span id="sidebar-user-name" style="font-size: 13px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">Yükleniyor...</span>
+                    <span id="sidebar-user-email" style="font-size: 10px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">Giriş Yapılmadı</span>
+                    <span id="sidebar-trial-status" style="display: none; font-size: 10px; margin-top: 6px; color: #38bdf8; font-weight: 700; background: rgba(56, 189, 248, 0.15); padding: 3px 6px; border-radius: 4px; width: fit-content; border: 1px solid rgba(56, 189, 248, 0.3);"></span>
+                </div>
+            </div>
+
+            <button class="tab-btn active" id="tab-home" onclick="window.switchTab('home')">
+                <i data-lucide="home"></i>
+                <span>ANASAYFA</span>
+            </button>
+            <button class="tab-btn" id="tab-scanner" onclick="window.switchTab('scanner')">
+                <i data-lucide="scan"></i>
+                <span>TARA</span>
+            </button>
+            <button class="tab-btn" id="tab-add" onclick="window.switchTab('add')">
+                <i data-lucide="plus-square"></i>
+                <span>EKLE</span>
+            </button>
+            <button class="tab-btn" id="tab-registry" onclick="window.switchTab('registry')">
+                <i data-lucide="archive"></i>
+                <span>DEFTER</span>
+            </button>
+            <button class="tab-btn" id="tab-profile" onclick="window.switchTab('profile')">
+                <i data-lucide="user"></i>
+                <span>PROFİL</span>
+            </button>
+            <div style="margin: 10px 20px; border-top: 1px solid rgba(255,255,255,0.05);"></div>
+            <button class="tab-btn" id="tab-share" onclick="window.switchTab('share')">
+                <i data-lucide="send"></i>
+                <span>PAYLAŞ & GÖNDER</span>
+            </button>
+            <button class="tab-btn" id="tab-help" onclick="window.switchTab('help')">
+                <i data-lucide="help-circle"></i>
+                <span>KULLANIM REHBERİ</span>
+            </button>
+            <button class="tab-btn" id="tab-settings" onclick="window.switchTab('settings')">
+                <i data-lucide="settings"></i>
+                <span>AYARLAR</span>
+            </button>
+            <button class="tab-btn" id="tab-team" onclick="window.manageTeamPrompt()">
+                <i data-lucide="users"></i>
+                <span>EKİP YÖNETİMİ</span>
+            </button>
+            <button class="tab-btn" id="tab-trash" onclick="window.switchTab('trash')">
+                <i data-lucide="trash-2"></i>
+                <span>ÇÖP KUTUSU</span>
+            </button>
+            <button class="tab-btn" id="tab-about" onclick="window.toggleMenu(false); document.getElementById('aboutModal').classList.remove('hidden')">
+                <i data-lucide="help-circle"></i>
+                <span>HAKKINDA</span>
+            </button>
+
+            <div class="sidebar-footer">
+                <div id="connectionStatus" class="status-dot online"></div>
+                <span>Sistem Aktif</span>
+            </div>
+        </nav>
+
+        <!-- SAĞ İÇERİK ALANI -->
+        <div class="content-area">
+
+            <!-- DUYURU BARI (GİZLİ BAŞLAR) -->
+            <div id="system-announcement-bar" style="display:none; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff; padding: 12px 20px; margin: 15px 15px 0 15px; border-radius: 12px; align-items:center; justify-content:space-between; box-shadow: 0 4px 15px rgba(16,185,129,0.3);">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <i data-lucide="bell" style="width:20px; height:20px;"></i>
+                    <div>
+                        <strong id="announcement-title" style="display:block; font-size:14px;"></strong>
+                        <span id="announcement-message" style="font-size:12px; opacity:0.9;"></span>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('system-announcement-bar').style.display='none'" style="background:none; border:none; color:#fff; cursor:pointer;"><i data-lucide="x"></i></button>
+            </div>
+
+            <!-- ANASAYFA Ekranı -->
+            <div id="screen-home" class="screen">
+                <div class="screen-content home-grid">
+                    <!-- PROFESYONEL VE HAREKETLİ ANASAYFA BAŞLIĞI -->
+                    <div class="welcome-section animate-in" style="--delay: 0s">
+                        <div class="welcome-header-card">
+                            <div class="welcome-glow-dot"></div>
+                            <div class="welcome-sparkle"><i data-lucide="sparkles"></i></div>
+                            <div class="welcome-text-group">
+                                <h2>Merhaba, <span id="home-user-name">Kullanıcı</span>! <span class="animated-wave">👋</span></h2>
+                                <p>Bugün neyi arşivlemek istersin?</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- YENİ SESLİ ARAMA ÇUBUĞU -->
+                    <div class="home-search-container animate-in" style="--delay: 0.05s">
+                        <div class="search-bar-with-mic">
+                            <i data-lucide="search" class="search-icon"></i>
+                            <input type="text" id="homeSearchInput" placeholder="Klasör veya dosya içeriği ara..." autocomplete="off" oninput="window.filterHomeSearch()">
+                            <button type="button" class="mic-btn" id="mic-homeSearchInput" onclick="window.startVoiceInput('homeSearchInput')">
+                                <i data-lucide="mic"></i>
+                            </button>
+                        </div>
+                        <div id="homeSearchResults" class="search-results-dropdown hidden"></div>
+                    </div>
+
+                    <div class="action-cards">
+                        <div class="card animate-in" style="--delay: 0.1s" onclick="window.switchTab('scanner')">
+                            <div class="card-icon"><i data-lucide="scan"></i></div>
+                            <div class="card-info">
+                                <h3>Klasör Tara</h3>
+                                <p>AI ile gerçek zamanlı tanıma</p>
+                            </div>
+                        </div>
+                        <div class="card animate-in" style="--delay: 0.2s" onclick="window.switchTab('add')">
+                            <div class="card-icon"><i data-lucide="file-plus"></i></div>
+                            <div class="card-info">
+                                <h3>Klasör Ekle</h3>
+                                <p>Yeni kayıt oluştur</p>
+                            </div>
+                        </div>
+                        <div class="card animate-in" style="--delay: 0.3s" onclick="window.switchTab('registry')">
+                            <div class="card-icon"><i data-lucide="archive"></i></div>
+                            <div class="card-info">
+                                <h3>Kayıt Defteri</h3>
+                                <p>Tüm arşivi listele — <span id="home-registry-count">0</span> kayıt</p>
+                            </div>
+                        </div>
+                    </div>
+
+
+                </div>
+            </div>
+
+            <!-- TARA Ekranı (OpenScan Tarzı Evrak Tarayıcı) -->
+            <div id="screen-scanner" class="screen hidden scanner-screen">
+                <!-- Tarayıcı Üst Ayar Menüsü -->
+                <div class="scanner-top-menu">
+                    <!-- Nötr Başlık -->
+                    <div class="openscan-header-brand" style="color: #fff; font-weight: 800; letter-spacing: 0.5px; font-size: 16px;">
+                        TARAYICI
+                    </div>
+
+                    <button class="scan-setting-btn" id="scan-grid-btn" onclick="window.toggleScanGrid()" title="Kılavuz Izgarası">
+                        <i data-lucide="grid"></i>
+                        <span>Izgara</span>
+                    </button>
+                    <button class="scan-setting-btn" id="scan-flash-btn" onclick="window.toggleScanFlash()" title="Flaş">
+                        <i data-lucide="zap-off"></i>
+                        <span>Flaş</span>
+                    </button>
+                    <button class="scan-setting-btn" id="scan-ratio-btn" onclick="window.toggleScanRatio()" title="Boyut">
+                        <i data-lucide="aspect-ratio"></i>
+                        <span id="scan-ratio-label">4:3</span>
+                    </button>
+                    <button class="scan-setting-btn" id="scan-mode-btn" onclick="window.toggleScanMode()" title="Çekim Yöntemi">
+                        <i data-lucide="settings"></i>
+                        <span id="scan-mode-label">Manuel</span>
+                    </button>
+                </div>
+
+                <div class="screen-content scanner-main-container">
+                    <!-- Kamera Vizörü -->
+                    <div class="scanner-viewport-wrapper" id="scanner-viewport-wrapper">
+                        <video id="scanner" autoplay playsinline muted></video>
+                        <canvas id="arOverlay"></canvas>
+                        <div id="scannerStatusMsg" class="scanner-status-msg">Bir belge hizalayın</div>
+                        
+                        <!-- 3x3 Kılavuz Çizgileri -->
+                        <div class="scanner-grid-lines hidden" id="scannerGridLines">
+                            <div class="grid-line horizontal h1"></div>
+                            <div class="grid-line horizontal h2"></div>
+                            <div class="grid-line vertical v1"></div>
+                            <div class="grid-line vertical v2"></div>
+                        </div>
+
+                        <!-- Tarama Kılavuz Çerçevesi (CamScanner Köşeleri) -->
+                        <div class="scanner-guide-box">
+                            <div class="corner top-left"></div>
+                            <div class="corner top-right"></div>
+                            <div class="corner bottom-left"></div>
+                            <div class="corner bottom-right"></div>
+                        </div>
+                        
+                        <div class="scanner-laser-line"></div>
+                    </div>
+
+                    <!-- Gizli kalan eski öğeler (JS hatası almamak için DOM'da tutuyoruz) -->
+                    <div class="hidden" style="display:none !important;">
+                        <input type="text" id="targetName" value="evrak">
+                        <textarea id="scannerLiveText"></textarea>
+                        <span id="confVal">0%</span>
+                        <span id="scanner-registry-count">0</span>
+                        <button id="mainActionBtn"></button>
+                    </div>
+
+                    <!-- Kamera Kontrol Barı (OpenScan Tarzı) -->
+                    <div class="scanner-control-bar">
+                        
+                        <div class="control-actions">
+                            <!-- Galeriden Seç Butonu -->
+                            <button class="ctrl-btn gallery-btn" onclick="document.getElementById('galleryInput').click()" title="Galeriden Seç">
+                                <i data-lucide="image"></i>
+                                <span>Galeri</span>
+                            </button>
+                            <input type="file" id="galleryInput" accept="image/*" class="hidden" onchange="window.handleGalleryUpload(event)">
+                            
+                            <!-- Büyük Çekim (Deklanşör) Butonu -->
+                            <button id="takeDocPhotoBtn" onclick="window.takeDocPhoto()" class="ctrl-btn shutter-btn" title="Fotoğraf Çek">
+                                <div class="shutter-inner"></div>
+                            </button>
+
+                            <!-- Bilgi Butonu -->
+                            <button class="ctrl-btn info-btn" onclick="Swal.fire({title:'Nasıl Çalışır?', text:'Kamerayı evrağa doğru tutun veya Galeriden Seç butonunu kullanın. Görüntü işleme filtrelerimiz resmi otomatik olarak net bir dökümana dönüştürecektir.', icon:'info', background:'#060713', color:'#fff', confirmButtonColor:'#f37121'})" title="Bilgi">
+                                <i data-lucide="help-circle"></i>
+                                <span>Yardım</span>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- EKLE Ekranı -->
+            <div id="screen-add" class="screen hidden">
+                <div class="screen-header">
+                    <h2>Klasör Kaydı</h2>
+                </div>
+                <div class="screen-content">
+                    <div class="photo-section">
+                        <div class="photo-preview-wrapper">
+                            <div class="photo-preview" id="photoPreview" style="position:relative;">
+                                <video id="add-video" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover; border-radius:16px; background:#000;"></video>
+                                <canvas id="add-overlay" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:10; border-radius:16px;"></canvas>
+                                <div class="placeholder-icon hidden"><i data-lucide="camera"></i></div>
+                                <p class="hidden">Klasör fotoğrafı çekin</p>
+                            </div>
+                            <button id="retakePhotoBtn" class="floating-cancel-btn hidden btn-shake" title="İptal / Tekrar Çek">
+                                <i data-lucide="trash-2"></i>
+                            </button>
+                        </div>
+                        <div class="photo-controls">
+                            <button id="snapPhotoBtn" class="animated-btn btn-primary pulse-btn">
+                                <i data-lucide="aperture"></i> FOTOĞRAF ÇEK
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Klasör Etiketi</label>
+                        <div class="input-with-mic">
+                            <input type="text" id="newFolderName" placeholder="Örn: 2024 Muhasebe">
+                            <button type="button" class="mic-btn" id="mic-newFolderName" onclick="window.startVoiceInput('newFolderName')">
+                                <i data-lucide="mic"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Klasör Yeri / Sırası</label>
+                        <div class="input-with-mic">
+                            <input type="text" id="newFolderLocation" placeholder="Örn: Raf 3, Sıra 12">
+                            <button type="button" class="mic-btn" id="mic-newFolderLocation" onclick="window.startVoiceInput('newFolderLocation')">
+                                <i data-lucide="mic"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>İçerik Detayları</label>
+                        <div class="input-with-mic">
+                            <textarea id="newFolderContent" rows="3" placeholder="İçindeki isimler veya dosya detayları..."></textarea>
+                            <button type="button" class="mic-btn mic-textarea" id="mic-newFolderContent" onclick="window.startVoiceInput('newFolderContent')">
+                                <i data-lucide="mic"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="add-actions">
+                        <button id="saveFolderBtn" class="save-btn animated-btn btn-primary">KAYDET</button>
+                        <button class="cancel-btn" onclick="window.cancelAdd()">VAZGEÇ</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DEFTER Ekranı -->
+            <div id="screen-registry" class="screen hidden">
+                <div class="screen-header" style="display:flex; align-items:center; gap:10px;">
+                    <button class="menu-toggle-btn mobile-only-btn" onclick="window.toggleMenu(true)" style="background:none; border:none; color:#fff; cursor:pointer; padding:5px; display:flex; align-items:center; justify-content:center;">
+                        <i data-lucide="menu" style="width:24px; height:24px;"></i>
+                    </button>
+                    <h2 style="flex:1;">Kayıt Defteri</h2>
+                </div>
+                
+                <div class="registry-filters" style="display: flex; overflow-x: auto; flex-wrap: nowrap; gap: 10px; margin: 0 15px 15px 15px; padding-bottom: 5px; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
+                    <style>
+                        .registry-filters::-webkit-scrollbar { display: none; }
+                        .registry-filters .filter-btn { flex-shrink: 0; width: auto; white-space: nowrap; }
+                    </style>
+                    <button class="filter-btn active" data-filter="all" onclick="window.setRegistryFilter('all')">Tümü</button>
+                    <button class="filter-btn" data-filter="scan" onclick="window.setRegistryFilter('scan')">Tarayıcı</button>
+                    <button class="filter-btn" data-filter="folder" onclick="window.setRegistryFilter('folder')">Arşiv</button>
+                    <button class="filter-btn" data-filter="favorites" onclick="window.setRegistryFilter('favorites')" style="border-color: #eab308; color: #eab308;"><i data-lucide="star" style="width:14px; height:14px; margin-right:4px; display:inline-block; vertical-align:middle;"></i>Favoriler</button>
+                    <button class="filter-btn" data-filter="received" onclick="window.setRegistryFilter('received')" style="border-color: #8b5cf6; color: #8b5cf6;"><i data-lucide="inbox" style="width:14px; height:14px; margin-right:4px; display:inline-block; vertical-align:middle;"></i>Gelenler</button>
+                    <button class="filter-btn" data-filter="sent" onclick="window.setRegistryFilter('sent')" style="border-color: #0ea5e9; color: #0ea5e9;"><i data-lucide="send" style="width:14px; height:14px; margin-right:4px; display:inline-block; vertical-align:middle;"></i>Gidenler</button>
+                </div>
+                
+                <div class="screen-content" id="registryList">
+                    <p class="empty-msg">Henüz kayıt bulunmuyor.</p>
+                </div>
+            </div>
+
+            <!-- PROFİL Ekranı -->
+            <div id="screen-profile" class="screen hidden">
+                <div class="screen-header">
+                    <h2>Profil Bilgileri</h2>
+                </div>
+                <div class="screen-content" style="display:flex; flex-direction:column; gap:16px;">
+                    <div class="profile-header animate-in">
+                        <img id="profile-img-large" src="logo.png" alt="Profil">
+                        <h3 id="profile-name-large">ArşivX Kullanıcısı</h3>
+                        <p id="profile-email">Giriş yapılmadı</p>
+                        <button class="tech-btn animated-btn" id="edit-profile-name-btn" onclick="window.editProfileName()" style="margin-top: 8px; width: 100%; padding: 12px; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 8px; background: rgba(224, 179, 84, 0.08); border: 1px solid rgba(224, 179, 84, 0.3); color: #e0b354; border-radius: 12px;">
+                            <i data-lucide="edit-3" style="width: 16px; height: 16px;"></i> AD SOYAD DÜZENLE
+                        </button>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card animate-in" style="--delay: 0.3s">
+                            <h4 id="stat-total">0</h4>
+                            <p>Toplam Kayıt</p>
+                        </div>
+                        <div class="stat-card animate-in" style="--delay: 0.4s">
+                            <h4>%100</h4>
+                            <p>Bulut Senk.</p>
+                        </div>
+                    </div>
+                    
+                    <button class="danger-btn animated-btn" onclick="window.logout()" style="margin-top:10px; width:100%; padding:14px; font-size:14px;">
+                        <i data-lucide="log-out"></i> OTURUMU KAPAT
+                    </button>
+                </div>
+            </div>
+
+            <!-- AYARLAR Ekranı -->
+            <!-- YARDIM / NASIL KULLANILIR Ekranı -->
+            <div id="screen-help" class="screen hidden">
+                <div class="screen-header">
+                    <h2>Kullanım Rehberi</h2>
+                </div>
+                <div class="screen-content" style="padding:20px;">
+                    <div class="glass-panel animate-in" style="padding: 20px; --delay: 0.1s">
+                        <h3 style="color:var(--accent); margin-top:0;"><i data-lucide="scan"></i> Evrak Nasıl Taranır?</h3>
+                        <p style="color:var(--text-dim); font-size:14px; line-height:1.6;">Menüden <strong>TARA</strong> sekmesine geçin. Kameraya izin verin ve evrakı düz bir zeminde net çıkacak şekilde çekin. Uygulama otomatik olarak yazıları (OCR) okuyacaktır. Ardından Kaydet diyerek istediğiniz deftere atabilirsiniz.</p>
+                    </div>
+                    <div class="glass-panel animate-in" style="padding: 20px; margin-top:15px; --delay: 0.2s">
+                        <h3 style="color:var(--accent); margin-top:0;"><i data-lucide="archive"></i> Defter Sistemi Nedir?</h3>
+                        <p style="color:var(--text-dim); font-size:14px; line-height:1.6;"><strong>DEFTER</strong> sekmesi sizin dijital klasörünüzdür. İstediğiniz kadar klasör (defter) açabilir, faturalarınızı, makbuzlarınızı ayrı ayrı kategorize edebilirsiniz.</p>
+                    </div>
+                    <div class="glass-panel animate-in" style="padding: 20px; margin-top:15px; --delay: 0.3s">
+                        <h3 style="color:var(--accent); margin-top:0;"><i data-lucide="send"></i> Dosya Paylaşımı</h3>
+                        <p style="color:var(--text-dim); font-size:14px; line-height:1.6;"><strong>PAYLAŞ & GÖNDER</strong> sekmesinden istediğiniz dosyayı seçip, alıcının E-Posta adresini girerek direkt ona mail atabilir veya uygulamanın içindeki hesabına gönderebilirsiniz.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAYLAŞ / GÖNDER Ekranı -->
+            <div id="screen-share" class="screen hidden">
+                <div class="screen-header">
+                    <h2>Paylaş & Gönder</h2>
+                </div>
+                <div class="screen-content" style="padding:20px;">
+                    <div class="glass-panel animate-in" style="padding: 20px; --delay: 0.1s">
+                        <h3 style="margin-top:0;">Evrak veya Defter Gönder</h3>
+                        <p style="color:var(--text-dim); font-size:13px; margin-bottom:20px;">Kayıtlı evraklarınızı e-posta adresine veya uygulamanın başka bir kullanıcısına gönderebilirsiniz.</p>
+                        
+                        <div class="form-group" style="margin-bottom:15px;">
+                            <label style="color:var(--text-dim); font-size:12px; margin-bottom:5px; display:block;">Gönderilecek Belge / Defter</label>
+                            <select id="share-item-select" class="input-field" style="width:100%; padding:12px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:#fff;">
+                                <option value="">Yükleniyor...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom:15px;">
+                            <label style="color:var(--text-dim); font-size:12px; margin-bottom:5px; display:block;">Alıcının E-Posta Adresi</label>
+                            <input type="email" id="share-email" class="input-field" placeholder="ornek@mail.com" style="width:100%; padding:12px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:#fff;">
+                        </div>
+                        
+                        <button onclick="window.sendItemToUser()" class="btn btn-primary" style="width:100%; padding:12px; border-radius:8px; font-weight:600;"><i data-lucide="send"></i> Hemen Gönder</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="screen-settings" class="screen hidden">
+                <div class="screen-header">
+                    <h2>Ayarlar</h2>
+                </div>
+                <div class="screen-content" style="display:flex; flex-direction:column; gap:16px;">
+                    <div class="settings-list">
+                        <div class="setting-item animate-in" style="--delay: 0.1s">
+                            <div class="setting-info">
+                                <h4>Karanlık Mod</h4>
+                                <p>Karanlık / Aydınlık tema geçişi</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="setting-theme" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-item animate-in" style="--delay: 0.2s">
+                            <div class="setting-info">
+                                <h4>Gelen Evrak Bildirimleri</h4>
+                                <p>Başkası evrak gönderdiğinde uyar</p>
+                                <button onclick="window.testNotification()" style="margin-top: 10px; background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.4); color: #c4b5fd; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-family: 'Outfit', sans-serif; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; transition: all 0.3s;" onmouseover="this.style.background='rgba(139,92,246,0.3)'" onmouseout="this.style.background='rgba(139,92,246,0.15)'">
+                                    <i data-lucide="bell-ring" style="width: 14px; height: 14px;"></i> Bildirim Testi
+                                </button>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="setting-notifications" checked onchange="window.toggleNotifications()">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ÇÖP KUTUSU Ekranı -->
+            <div id="screen-trash" class="screen hidden">
+                <div class="screen-header">
+                    <h2>Çöp Kutusu</h2>
+                    <button class="danger-btn" style="font-size:10px; padding:6px 12px; border-radius:8px;" onclick="window.emptyTrash()"><i data-lucide="trash"></i> TEMİZLE</button>
+                </div>
+                <div class="screen-content">
+                    <p style="color:var(--text-dim); font-size:12px; margin-bottom:10px;">Silinen dosyalar burada saklanır. Buradan tamamen silebilir veya geri yükleyebilirsiniz.</p>
+                    <div class="registry-list" id="trashList">
+                        <!-- Trash items will be injected here -->
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /content-area -->
+
+    </div><!-- /main-interface -->
+
+    <!-- QR Modal -->
+    <div id="qrModal" class="modal hidden">
+        <div class="modal-content animate-in">
+            <header>
+                <h3 id="qrModalHeaderTitle">Klasör QR Kodu</h3>
+                <button onclick="window.closeQRModal()">&times;</button>
+            </header>
+            <div id="qrCodeContainer" style="display: flex; justify-content: center; margin: 15px 0;"></div>
+            <p id="qrFolderTitle" style="word-break: break-all; font-weight: bold; color: var(--accent); margin-bottom: 10px;"></p>
+            <div id="qrHelpText" style="font-size: 12px; color: var(--text-dim); background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: left; line-height: 1.4;">
+                💡 <strong>Mobil Bağlantı Notu:</strong> Tarayıcınızda Localtunnel uyarı sayfası çıkarsa, <strong>"Click to Submit"</strong> yapmak için aşağıdaki IP adresini şifre kutusuna girin:<br>
+                🔑 Şifre (IP): <strong style="color: #10b981; font-size: 14px;">46.155.35.161</strong>
+            </div>
+            <button class="btn-primary" onclick="window.downloadQR()">📥 İNDİR / PAYLAŞ</button>
+        </div>
+    </div>
+
+    <!-- Kayıt Detayları Modal -->
+    <div id="recordDetailsModal" class="modal hidden">
+        <div class="modal-content doc-editor-content animate-in" style="max-height: 90vh; overflow-y: auto;">
+            <header>
+                <h3 style="font-size:16px;">Dosya Detayları</h3>
+                <button class="modal-close-btn" onclick="document.getElementById('recordDetailsModal').classList.add('hidden')" title="Kapat"><i data-lucide="x"></i></button>
+            </header>
+            <div style="display:flex; flex-direction:column; gap:15px; margin-top:10px;">
+                <img id="detail-img" src="" style="width:100%; border-radius:12px; max-height:200px; object-fit:cover; border:1px solid var(--glass-border);">
+                
+                <div style="background: var(--glass-bg); border: 1px solid var(--glass-border); padding:16px; border-radius:12px; text-align:left; display:flex; flex-direction:column; gap:10px;">
+                    <div>
+                        <span style="font-size:11px; color:var(--accent); text-transform:uppercase; font-weight:700; display:block; margin-bottom:2px;">Klasör Adı</span>
+                        <h4 id="detail-name" style="color: var(--text); font-size:16px; font-weight:700; margin:0;">Klasör Adı</h4>
+                    </div>
+                    <div>
+                        <span style="font-size:11px; color:var(--accent); text-transform:uppercase; font-weight:700; display:block; margin-bottom:2px;">Yeri / Konumu</span>
+                        <p id="detail-location" style="font-size:14px; color: var(--text); margin:0;">📍 Raf Konumu</p>
+                    </div>
+                    <div>
+                        <span style="font-size:11px; color:var(--accent); text-transform:uppercase; font-weight:700; display:block; margin-bottom:2px;">İçerik Detayları</span>
+                        <div style="font-size:13px; color: var(--text); background: var(--bg); padding:12px; border-radius:8px; min-height:60px; max-height:150px; overflow-y:auto; border:1px solid var(--glass-border); white-space: pre-wrap;" id="detail-content">İçerik Detayları</div>
+                    </div>
+                    <small id="detail-date" style="display:block; font-size:10px; color: var(--text-dim); text-align:right;">Tarih</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Evrak Düzenleyici & Filtreleyici Modal -->
+    <div id="docEditorModal" class="modal hidden">
+        <div class="modal-content doc-editor-content animate-in">
+            <header class="editor-header">
+                <h3 id="editor-title-text"><i data-lucide="crop"></i> Evrak Kırpma (Adım 1/3)</h3>
+                <button class="close-editor-btn" onclick="window.closeDocEditor()">&times;</button>
+            </header>
+
+            <!-- ADIM 1: KIRPMA (CROP) -->
+            <div id="editor-step-1" class="editor-step-container">
+                <div class="canvas-container crop-canvas-wrapper">
+                    <canvas id="docCanvas"></canvas>
+                    <div id="magnifier-bubble" class="hidden"></div>
+                </div>
+                <div class="crop-actions-bar">
+                    <button class="editor-btn btn-secondary" onclick="window.rotateDoc()"><i data-lucide="rotate-cw"></i> Döndür</button>
+                    <button class="editor-btn btn-secondary" onclick="window.resetCrop()"><i data-lucide="refresh-cw"></i> Sıfırla</button>
+                    <button class="editor-btn btn-secondary" onclick="window.selectFullPage()"><i data-lucide="maximize"></i> Tümünü Seç</button>
+                    <button class="editor-btn btn-primary" onclick="window.nextEditorStep(2)">Kırp ve İlerle <i data-lucide="arrow-right"></i></button>
+                </div>
+            </div>
+
+            <!-- ADIM 2: FİLTRE VE AYARLAR (DocScan Pro Technical Operations) -->
+            <div id="editor-step-2" class="editor-step-container hidden">
+                <div class="editor-two-column-layout">
+                    <!-- Sol Sütun: Belge Görünümü -->
+                    <div class="editor-canvas-column">
+                        <div class="canvas-container filter-canvas-wrapper">
+                            <canvas id="filterCanvas"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Sağ Sütun: OpenScan Tarzı Kontroller (Scrollable) -->
+                    <div class="editor-controls-column">
+                        <h4 class="tech-ops-title"><i data-lucide="sliders"></i> Görüntü Ayarları & Filtreler</h4>
+                        <div class="tech-ops-scroll-container" style="padding: 15px; display: flex; flex-direction: column; gap: 20px;">
+                            
+                            <!-- 1. Hızlı Filtreler (Filter Carousel) -->
+                            <div class="tech-op-section" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 14px;">
+                                <h5 style="margin-bottom: 12px; color: #fff; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                                    <i data-lucide="palette" style="width: 16px; color: #f37121;"></i> HİZLI FİLTRELER
+                                </h5>
+                                <div id="filterCarousel" class="filter-carousel-wrapper" style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px;">
+                                    <!-- JS ile dinamik doldurulacak -->
+                                </div>
+                            </div>
+
+                            <!-- 2. Manuel Parlaklık ve Kontrast Ayarları -->
+                            <div class="tech-op-section" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 14px; display: flex; flex-direction: column; gap: 15px;">
+                                <h5 style="margin: 0; color: #fff; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                                    <i data-lucide="adjustments-horizontal" style="width: 16px; color: #f37121;"></i> RENK VE IŞIK AYARI
+                                </h5>
+                                
+                                <div class="control-group" style="display: flex; flex-direction: column; gap: 6px;">
+                                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim);">
+                                        <span>Parlaklık</span>
+                                        <span id="val-brightness" style="color: #f37121; font-weight: 700;">0</span>
+                                    </div>
+                                    <input type="range" id="slider-brightness" min="-100" max="100" value="0" oninput="window.updateAdjustments()" style="accent-color: #f37121; width: 100%;">
+                                </div>
+
+                                <div class="control-group" style="display: flex; flex-direction: column; gap: 6px;">
+                                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim);">
+                                        <span>Kontrast</span>
+                                        <span id="val-contrast" style="color: #f37121; font-weight: 700;">0</span>
+                                    </div>
+                                    <input type="range" id="slider-contrast" min="-100" max="100" value="0" oninput="window.updateAdjustments()" style="accent-color: #f37121; width: 100%;">
+                                </div>
+                            </div>
+
+                            <!-- 3. Döndürme ve Sınırlar -->
+                            <div class="tech-op-section" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 14px;">
+                                <h5 style="margin-bottom: 12px; color: #fff; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                                    <i data-lucide="rotate-cw" style="width: 16px; color: #f37121;"></i> HIZLI DÜZENLEMELER
+                                </h5>
+                                <div style="display: flex; gap: 10px;">
+                                    <button class="tech-btn" onclick="window.rotateDoc()" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 14px; font-size: 11px; font-weight: 600; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; color: #fff; cursor: pointer; transition: all 0.2s;">
+                                        <i data-lucide="rotate-cw" style="width: 14px;"></i> Döndür
+                                    </button>
+                                    <button class="tech-btn" onclick="window.selectFullPage()" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 14px; font-size: 11px; font-weight: 600; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; color: #fff; cursor: pointer; transition: all 0.2s;">
+                                        <i data-lucide="maximize" style="width: 14px;"></i> Tam Sayfa
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <div class="crop-actions-bar" style="margin-top: 15px;">
+                    <button class="editor-btn btn-secondary" onclick="window.prevEditorStep(1)"><i data-lucide="arrow-left"></i> Geri</button>
+                    <button class="editor-btn btn-primary" onclick="window.nextEditorStep(3)">Devam Et <i data-lucide="arrow-right"></i></button>
+                </div>
+            </div>
+
+            <!-- ADIM 3: KAYIT BİLGİLERİ -->
+            <div id="editor-step-3" class="editor-step-container hidden">
+                <div class="save-preview-container">
+                    <canvas id="finalPreviewCanvas" style="width: 100px; height: 100px; border-radius: 8px; object-fit: contain; background: #000; border: 1px solid var(--glass-border);"></canvas>
+                    <div style="flex:1; text-align:left;">
+                        <h4 style="font-size:14px; color:#fff; font-weight:700;">Evrak Kaydetme</h4>
+                        <p style="font-size:11px; color:var(--text-dim);">Son adım: Evrak bilgilerini girin ve bulut arşivine yükleyin.</p>
+                    </div>
+                </div>
+
+                <div class="editor-settings" style="display:flex; flex-direction:column; gap:12px; text-align:left; width:100%;">
+                    <div class="form-group">
+                        <label>Evrak Dosya Adı</label>
+                        <input type="text" id="docFileName" placeholder="Evrak İsmi (Örn: Fatura_01)">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Evrak Konumu</label>
+                        <div class="input-with-mic">
+                            <input type="text" id="docLocation" placeholder="Evrak Konumu (Örn: Raf 3)">
+                            <button type="button" class="mic-btn" id="mic-docLocation" onclick="window.startVoiceInput('docLocation')">
+                                <i data-lucide="mic"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Evrak İçeriği / Detayları (AI OCR)</label>
+                        <div class="input-with-mic">
+                            <textarea id="docContent" rows="12" style="font-family: monospace; white-space: pre-wrap; font-size: 13px;" placeholder="İçerik, detaylar veya OCR okunan metin..."></textarea>
+                            <button type="button" class="mic-btn mic-textarea" id="mic-docContent" onclick="window.startVoiceInput('docContent')">
+                                <i data-lucide="mic"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+
+                </div>
+
+                <div class="crop-actions-bar" style="margin-top:10px;">
+                    <button class="editor-btn btn-secondary" onclick="window.prevEditorStep(2)"><i data-lucide="arrow-left"></i> Geri</button>
+                    <button class="editor-btn btn-primary" onclick="window.saveProcessedDoc()"><i data-lucide="check"></i> Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hakkında (About) Modal -->
+    <div id="aboutModal" class="modal hidden">
+        <div class="modal-content animate-in" style="max-width: 450px; padding: 30px; text-align: center;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: #fff; display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="help-circle" style="color: var(--accent);"></i> Hakkında
+                </h3>
+                <button class="modal-close-btn" onclick="document.getElementById('aboutModal').classList.add('hidden')" style="background: none; border: none; color: var(--text-dim); cursor: pointer;"><i data-lucide="x"></i></button>
+            </div>
+            
+            <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                <img src="logo.png" alt="ArşivX Logo" style="width: 64px; height: 64px; border-radius: 16px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2);">
+                <h2 style="color: #fff; font-family: 'Outfit'; font-weight: 800; font-size: 24px; margin: 0 0 5px 0;">ArşivX <span style="color: var(--accent);">AI</span></h2>
+                <p style="color: var(--accent); font-weight: 600; font-size: 13px; letter-spacing: 1px; margin-bottom: 15px;">v2.0.0 PRO</p>
+                <p style="color: var(--text-dim); font-size: 14px; line-height: 1.6; margin-bottom: 0;">
+                    Yapay zeka destekli akıllı arşivleme, belge tanıma ve organizasyon platformu.
+                </p>
+            </div>
+
+            <div style="text-align: left; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.03); margin-bottom: 20px;">
+                <h4 style="color: #fff; font-size: 13px; margin-bottom: 8px;">Geliştirici</h4>
+                <p style="color: var(--text-dim); font-size: 13px; margin-bottom: 12px;">Bu yazılım <strong>Kartın Yazılım</strong> tarafından profesyonelce geliştirilmiştir.</p>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 32px; height: 32px; background: var(--accent); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700;">MK</div>
+                    <div>
+                        <div style="color: #fff; font-size: 13px; font-weight: 600;">Mustafa Kartın</div>
+                        <div style="color: var(--text-dim); font-size: 11px;">Kurucu & Baş Geliştirici</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="font-size: 11px; color: rgba(255,255,255,0.3); text-align: center; line-height: 1.5;">
+                &copy; 2026 Kartın Yazılım. Tüm hakları saklıdır.<br>
+                Uygulamanın izinsiz kopyalanması ve dağıtılması yasaktır.
+            </div>
+        </div>
+    </div>
+
+    </div> <!-- #app wrapper -->
+    <script src="app.js?v=20260603_v62" defer></script>
+    <script src="scanner.js?v=20260603_vULTIMATE2" defer></script>
+    <script async src="https://docs.opencv.org/4.7.0/opencv.js" onload="window.cvLoaded = true;"></script>
+    <script defer src="https://cdn.jsdelivr.net/gh/ColonelParrot/jscanify@master/src/jscanify.min.js"></script>
+</body>
+</html>
+

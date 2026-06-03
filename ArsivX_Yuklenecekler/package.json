@@ -1,0 +1,14 @@
+{
+  "name": "arsiv-x",
+  "version": "1.0.0",
+  "description": "AI Driven Archive Finder",
+  "main": "platforms/desktop/main.js",
+  "dependencies": {
+    "@capacitor-mlkit/document-scanner": "^8.1.0",
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
+    "@supabase/supabase-js": "^2.39.0",
+    "electron": "^30.0.0"
+  }
+}

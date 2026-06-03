@@ -15,7 +15,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Java
         uses: actions/setup-java@v4
@@ -28,8 +28,11 @@ jobs:
 
       - name: Prepare WWW Folder
         run: |
-          mkdir www
-          cp *.html *.js *.css *.json www/ || true
+          mkdir -p www
+          cp index.html www/
+          cp app.js www/
+          cp scanner.js www/
+          cp style.css www/
 
       - name: Prepare Capacitor
         run: |

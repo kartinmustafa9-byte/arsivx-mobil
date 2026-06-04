@@ -4579,7 +4579,24 @@ window.takeDocPhoto = function () {
 
   // Open professional document editor modal directly!
   if (typeof window.openDocEditor === "function") {
-    window.openDocEditor(rawPhotoUrl);
+    if (
+      window.lastDetectedLivePoints &&
+      Date.now() - window.lastDetectedLivePoints.timestamp < 3000
+    ) {
+      console.log("[ArşivX AI] Canlı yayından alınan noktalar kullanılıyor.");
+      window.openDocEditor(rawPhotoUrl, window.lastDetectedLivePoints.points);
+    } else if (typeof window.detectDocumentCornersFromImage === "function") {
+      console.log("[ArşivX AI] Canlı nokta bulunamadı, resimden analiz ediliyor...");
+      const img = new Image();
+      img.onload = () => {
+        window.detectDocumentCornersFromImage(img, (points) => {
+          window.openDocEditor(rawPhotoUrl, points);
+        });
+      };
+      img.src = rawPhotoUrl;
+    } else {
+      window.openDocEditor(rawPhotoUrl);
+    }
   }
 };
 
